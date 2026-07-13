@@ -1,0 +1,6 @@
+{
+  "name": "Aura Cycle: Glassmorphic Menstrual Tracker",
+  "description": "A high-fidelity glassmorphic menstrual cycle & hormonal phase tracker featuring 3D scroll-based visuals, interactive calendar dashboards, symptom loggers, and personalized lifestyle insights.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
