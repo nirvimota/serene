@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import Auth from './components/auth.jsx';
 import AppShell from './AppShell.jsx';
+import { supabase } from './supabaseClient';
 import {
   Sparkles,
   Calendar,
@@ -36,6 +37,7 @@ export default function App() {
   const [viewMode, setViewMode] = useState('landing');
   const [user, setUser] = useState(null);
   const [authMode, setAuthMode] = useState('login');
+  const [authLoading, setAuthLoading] = useState(true);
 
   // --- States for 3D and Scroll Mechanics ---
   const [scrollY, setScrollY] = useState(0);
@@ -60,6 +62,30 @@ export default function App() {
     };
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  useEffect(() => {
+    // Check for existing session on mount
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setUser(session.user);
+        setViewMode('app'); // <-- this was missing, so refresh always fell back to 'landing'
+      }
+      setAuthLoading(false);
+    });
+
+    // Keep state in sync if session changes (login/logout elsewhere, token refresh, etc.)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setUser(session.user);
+        setViewMode('app');
+      } else {
+        setUser(null);
+        setViewMode('landing');
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   // --- Static description dictionary for the 4 Seasons on the Landing Page ---
@@ -123,6 +149,14 @@ export default function App() {
     setViewMode('landing');
   };
 
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#fdfaf8]">
+        <div className="w-8 h-8 rounded-full border-2 border-stone-200 border-t-rose-500 animate-spin" />
+      </div>
+    );
+  }
+  
   return (
     <div id="aura-cycle-root" className="relative min-h-screen text-stone-800 overflow-hidden bg-[#fdfaf8] selection:bg-rose-200 selection:text-rose-900">
 
@@ -202,7 +236,7 @@ export default function App() {
 
           {/* HERO SECTION */}
           <section className="min-h-[85vh] flex flex-col items-center justify-center px-6 text-center max-w-5xl mx-auto py-16">
- 
+
             {/* Premium Floating Badge */}
             <div className="inline-flex items-center space-x-2 px-3 py-1 mt-20 rounded-full bg-rose-50 border border-rose-200/80 text-rose-600 text-[10px] font-mono tracking-widest uppercase mb-6 shadow-sm">
               <Sparkles size={11} className="animate-spin" style={{ animationDuration: '4s' }} />

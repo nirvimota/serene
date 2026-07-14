@@ -30,6 +30,33 @@ export async function getMonthLogs(userId, year, month) {
   if (error) throw error;
   return data;
 }
+export async function getDayLog(userId, date) {
+  const dateStr = typeof date === 'string' ? date : date.toISOString().slice(0, 10);
+  const { data, error } = await supabase
+    .from('cycle_logs')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('log_date', dateStr)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data; // null if no log exists yet for that day
+}
+
+export async function upsertDayLog(userId, date, fields) {
+  const dateStr = typeof date === 'string' ? date : date.toISOString().slice(0, 10);
+  const { data, error } = await supabase
+    .from('cycle_logs')
+    .upsert(
+      { user_id: userId, log_date: dateStr, ...fields },
+      { onConflict: 'user_id,log_date' }
+    )
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
 
 /**
  * Fetch every date the user has marked as a period day, across all time,
@@ -51,37 +78,11 @@ export async function getAllPeriodDates(userId) {
   return data.map((row) => row.log_date); // already 'YYYY-MM-DD' from Postgres date type
 }
 
-/** Fetch a single day's log, or null if nothing logged yet. */
-export async function getDayLog(userId, dateStr) {
-  const { data, error } = await supabase
-    .from('cycle_logs')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('log_date', dateStr)
-    .maybeSingle();
-
-  if (error) throw error;
-  return data;
-}
-
 /**
  * Create or update a day's log. Pass only the fields you want to change —
  * existing columns not included are left untouched (Postgres upsert
  * behavior via merge on the unique (user_id, log_date) constraint).
  */
-export async function upsertDayLog(userId, dateStr, fields) {
-  const { data, error } = await supabase
-    .from('cycle_logs')
-    .upsert(
-      { user_id: userId, log_date: dateStr, ...fields },
-      { onConflict: 'user_id,log_date' }
-    )
-    .select()
-    .single();
-
-  if (error) throw error;
-  return data;
-}
 
 /** Flip is_period for a day — mirrors your current togglePeriodDay(date) behavior. */
 export async function togglePeriodDay(userId, dateStr) {

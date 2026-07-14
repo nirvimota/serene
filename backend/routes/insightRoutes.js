@@ -1,10 +1,10 @@
 import express from 'express';
-import Anthropic from '@anthropic-ai/sdk';
+import Groq from 'groq-sdk';
 import { supabaseAdmin } from '../supabaseAdmin.js';
 import { requireAuth } from '../middleware/auth.js';
 
 const router = express.Router();
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 router.post('/daily', requireAuth, async (req, res) => {
   const userId = req.userId;
@@ -32,22 +32,24 @@ router.post('/daily', requireAuth, async (req, res) => {
     // 2. Generate a fresh one
     const systemPrompt = `You are a warm, supportive companion inside a menstrual health app called Serene Cycle.
 Given a user's mood, optional journal text, and cycle phase, write:
-1. A short (2-3 sentence) positive, mood-lifting reflection that validates their feelings and gently connects it to their cycle phase if relevant.
-2. One short reflective journal prompt (a single sentence).
-Respond ONLY with JSON in this exact shape, no markdown, no preamble: {"reflection": "...", "prompt": "..."}`;
+1. A positive, mood-lifting reflection — exactly 2 complete sentences, each ending in a period. Do not run sentences together with "and" or commas. Keep each sentence under 15 words.
+2. One short reflective journal prompt — a single sentence, under 15 words.
+Respond ONLY with valid JSON in this exact shape, no markdown, no preamble: {"reflection": "First sentence. Second sentence.", "prompt": "Your prompt here?"}`;
 
     const userPrompt = `Mood: ${mood || 'not specified'}
 Cycle phase: ${cyclePhase || 'unknown'}
 Journal entry: ${entryText?.trim() ? entryText : '(no entry written today)'}`;
 
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-5',
+    const response = await groq.chat.completions.create({
+      model: 'llama-3.3-70b-versatile',
       max_tokens: 300,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: userPrompt }],
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
     });
 
-    const raw = response.content.find((b) => b.type === 'text')?.text?.trim() ?? '{}';
+    const raw = response.choices[0]?.message?.content?.trim() ?? '{}';
     const cleaned = raw.replace(/```json|```/g, '').trim();
 
     let parsed;
@@ -56,10 +58,10 @@ Journal entry: ${entryText?.trim() ? entryText : '(no entry written today)'}`;
     } catch {
       parsed = { reflection: cleaned, prompt: '' };
     }
-
     // 3. Cache it so it's not regenerated today
     const { error: insertError } = await supabaseAdmin.from('daily_insights').insert({
       user_id: userId,
+      log_date: insightDate,      // <-- add this
       insight_date: insightDate,
       mood: mood || null,
       cycle_phase: cyclePhase || null,

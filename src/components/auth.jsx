@@ -65,13 +65,16 @@ export default function Auth({ onAuthSuccess, initialMode = 'login', onBackToLan
         const { data, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
-          options: { data: { full_name: fullName } },
+          options: {
+            data: {
+              full_name: fullName,
+              avg_cycle_length: customCycleLength,
+              avg_period_length: customPeriodLength,
+            },
+          },
         });
         if (signUpError) throw signUpError;
 
-        // Supabase project may require email confirmation before a
-        // session exists. If so, data.session is null — handle that
-        // instead of assuming the user is immediately logged in.
         if (!data.session) {
           setLoading(false);
           setError('Check your email to confirm your account, then log in.');
@@ -79,17 +82,23 @@ export default function Auth({ onAuthSuccess, initialMode = 'login', onBackToLan
           return;
         }
 
+        setLoadingStep(1);
+        onAuthSuccess(data.user);
+
         setLoadingStep(1); // "Calibrating hormonal phase indicators..."
         // profiles row already exists via the on_auth_user_created trigger —
         // just update it with the cycle-length sliders from this form.
-        const { error: profileError } = await supabase
+        const { data: updatedRows, error: profileError } = await supabase
           .from('profiles')
           .update({
             avg_cycle_length: customCycleLength,
             avg_period_length: customPeriodLength,
           })
-          .eq('id', data.user.id);
+          .eq('id', data.user.id)
+          .select(); // <-- forces it to return the updated row(s)
+
         if (profileError) throw profileError;
+        console.log('Profile update result:', updatedRows); // [] means RLS blocked it silently
 
         setLoadingStep(2); // "Generating custom glassmorphic canvas..."
         onAuthSuccess(data.user);
@@ -173,8 +182,8 @@ export default function Auth({ onAuthSuccess, initialMode = 'login', onBackToLan
               id="auth-tab-login"
               onClick={() => { setMode('login'); setError(''); }}
               className={`flex-1 py-2 rounded-xl text-xs font-mono font-bold transition-all ${mode === 'login'
-                  ? 'bg-white text-stone-900 shadow-sm'
-                  : 'text-stone-400 hover:text-stone-700'
+                ? 'bg-white text-stone-900 shadow-sm'
+                : 'text-stone-400 hover:text-stone-700'
                 }`}
             >
               LOGIN
@@ -186,8 +195,8 @@ export default function Auth({ onAuthSuccess, initialMode = 'login', onBackToLan
                 setMode('signup'); setError('');
               }}
               className={`flex-1 py-2 rounded-xl text-xs font-mono font-bold transition-all ${mode === 'signup'
-                  ? 'bg-white text-stone-900 shadow-sm'
-                  : 'text-stone-400 hover:text-stone-700'
+                ? 'bg-white text-stone-900 shadow-sm'
+                : 'text-stone-400 hover:text-stone-700'
                 }`}
             >
               SIGN UP
@@ -356,17 +365,6 @@ export default function Auth({ onAuthSuccess, initialMode = 'login', onBackToLan
 
           </form>
         )}
-
-        {/* Demo Notice footer inside auth */}
-        <div className="mt-8 pt-6 border-t border-stone-200/50 flex flex-col items-center justify-center text-center space-y-2">
-          <span className="text-[9px] font-mono text-stone-400 tracking-widest block uppercase">SUPPORTED INTEGRATION PROTOCOLS</span>
-
-          <div className="flex items-center space-x-4 opacity-50 grayscale hover:grayscale-0 transition-all">
-            <span className="text-[10px] font-mono font-bold text-stone-600">SUPABASE AUTH</span>
-            <span className="text-[10px] font-mono font-bold text-stone-600">JWT SESSION</span>
-          </div>
-        </div>
-
       </div>
     </div>
   );

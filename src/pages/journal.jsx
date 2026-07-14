@@ -13,7 +13,8 @@ import {
   Sparkles,
   BookOpen,
   Leaf,
-  Activity
+  Activity,
+  ArrowRight,
 } from 'lucide-react';
 
 const FILTERS = ['All', 'Reflections', 'Symptom Log'];
@@ -144,16 +145,14 @@ export default function Journal({ activeNav, onNavigate, cycleData }) {
         }}
       />
 
-      {/* Ambient glow blobs */}
-      <div className="fixed top-[-10%] left-[15%] w-500px h-500px rounded-full bg-rose-200/30 blur-[130px] pointer-events-none z-0 animate-pulse" style={{ animationDuration: '6s' }} />
-      <div className="fixed bottom-[5%] right-[10%] w-500px h-500px rounded-full bg-amber-100/30 blur-[130px] pointer-events-none z-0 animate-pulse" style={{ animationDuration: '6s', animationDelay: '3s' }} />
-
+      {/* Ambient glow blobs — fix missing brackets */}
+      <div className="fixed top-[-10%] left-[15%] w-[500px] h-[500px] rounded-full bg-rose-200/30 blur-[130px] pointer-events-none z-0 animate-pulse" style={{ animationDuration: '6s' }} />
+      <div className="fixed bottom-[5%] right-[10%] w-[500px] h-[500px] rounded-full bg-amber-100/30 blur-[130px] pointer-events-none z-0 animate-pulse" style={{ animationDuration: '6s', animationDelay: '3s' }} />
       {/* ============ TOP NAV ============ */}
       <TopNav activeNav={activeNav} onNavigate={onNavigate} />
 
       {/* ============ MAIN CONTENT ============ */}
-      <main className="relative z-20 max-w-7xl mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-
+      <main className="relative z-20 max-w-7xl mx-auto px-6 pt-8 pb-2 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* LEFT COLUMN: Search + Entry List */}
         <div className="lg:col-span-3 space-y-4">
           <div className="relative">
@@ -209,7 +208,7 @@ export default function Journal({ activeNav, onNavigate, cycleData }) {
 
         {/* CENTER COLUMN: Daily Reflection */}
         <div className="lg:col-span-6">
-          <div className="glass-panel rounded-3xl p-8 bg-white/85 border border-stone-200/40 min-h-600px flex flex-col">
+          <div className="glass-panel rounded-3xl p-8 bg-white/85 border border-stone-200/40 min-h-[320px] flex flex-col">
             <div className="flex items-start justify-between mb-1">
               <div>
                 <span className="text-xs font-mono text-emerald-600 font-semibold block mb-1">{todayLabel}</span>
@@ -256,7 +255,7 @@ export default function Journal({ activeNav, onNavigate, cycleData }) {
                 value={noteText}
                 onChange={(e) => setNoteText(e.target.value)}
                 placeholder="Start typing your thoughts, feelings, or observations here..."
-                className="w-full h-full min-h-280px p-5 rounded-2xl bg-rose-50/50 border border-rose-100/60 text-sm text-stone-700 placeholder-stone-400 focus:outline-none focus:border-rose-300 focus:bg-white resize-none transition-all leading-relaxed"
+                className="w-full h-full min-h-[160px] p-5 rounded-2xl bg-rose-50/50 border border-rose-100/60 text-sm text-stone-700 placeholder-stone-400 focus:outline-none focus:border-rose-300 focus:bg-white resize-none transition-all leading-relaxed"
               />
             </div>
           </div>
@@ -266,15 +265,22 @@ export default function Journal({ activeNav, onNavigate, cycleData }) {
         <div className="lg:col-span-3 space-y-5">
 
           {/* AI Reflection Card */}
-          <p className="text-xs text-stone-700 leading-relaxed">
-            {insightLoading ? 'Thinking of something for you…' : insight?.reflection}
-          </p>
-          <div className="mt-3 p-3 rounded-xl bg-white/70 border border-emerald-100/50">
-            <span className="text-[10px] font-mono text-emerald-600 font-bold uppercase tracking-wide block mb-1">Prompt for you</span>
-            <p className="text-xs text-stone-600 italic leading-relaxed">
-              {insight?.prompt}
+          <div className="glass-panel rounded-3xl p-5 bg-emerald-50/60 border border-emerald-100/60">
+            <div className="flex items-center space-x-2 mb-3">
+              <Sparkles size={14} className="text-emerald-600" />
+              <span className="font-mono text-xs font-bold text-stone-800 uppercase tracking-wide">AI Reflection</span>
+            </div>
+            <p className="text-xs text-stone-700 leading-relaxed">
+              {insightLoading ? 'Thinking of something for you…' : insight?.reflection}
             </p>
+            <div className="mt-3 p-3 rounded-xl bg-white/70 border border-emerald-100/50">
+              <span className="text-[10px] font-mono text-emerald-600 font-bold uppercase tracking-wide block mb-1">Prompt for you</span>
+              <p className="text-xs text-stone-600 italic leading-relaxed">
+                {insight?.prompt}
+              </p>
+            </div>
           </div>
+
 
           {/* Resources for you */}
           <div>
@@ -309,23 +315,30 @@ export default function Journal({ activeNav, onNavigate, cycleData }) {
                   <span className="text-xs font-mono font-semibold text-stone-700 leading-snug">Cycle Syncing Workout</span>
                 </div>
               </div>
-
-              {/* Symptom library card */}
-              <div className="glass-panel rounded-2xl p-4 bg-white/80 border border-stone-200/40 flex items-center space-x-3 cursor-pointer hover:border-stone-300 transition-all">
-                <div className="w-9 h-9 rounded-xl bg-stone-100 flex items-center justify-center text-stone-500 shrink-0">
-                  <BookOpen size={16} />
-                </div>
-                <div>
-                  <span className="text-xs font-mono font-bold text-stone-800 block">The Symptom Library</span>
-                  <span className="text-[10px] font-mono text-stone-400">Browse 50+ common entries</span>
-                </div>
-              </div>
             </div>
           </div>
 
         </div>
 
       </main>
+      {/* SYMPTOM LIBRARY — full width section */}
+      <section className="relative z-20 max-w-7xl mx-auto px-6 pt-2 pb-12">
+        <div className="glass-panel rounded-3xl p-6 bg-white/80 border border-stone-200/40 flex items-center justify-between cursor-pointer hover:border-stone-300 transition-all group">
+          <div className="flex items-center space-x-4">
+            <div className="w-12 h-12 rounded-2xl bg-stone-100 flex items-center justify-center text-stone-500 shrink-0 group-hover:bg-rose-50 group-hover:text-rose-500 transition-all">
+              <BookOpen size={22} />
+            </div>
+            <div>
+              <h3 className="font-serif text-lg font-bold text-stone-900">The Symptom Library</h3>
+              <p className="text-xs font-mono text-stone-400 mt-0.5">Browse 50+ common entries and their meanings</p>
+            </div>
+          </div>
+          <ArrowRight
+            size={18}
+            className="text-stone-400 group-hover:text-rose-500 group-hover:translate-x-1 transition-all"
+          />
+        </div>
+      </section>
     </div>
   );
 }

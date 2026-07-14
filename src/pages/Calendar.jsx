@@ -1,16 +1,21 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import TopNav from '../components/TopNav.jsx';
 import { getDayInfo, toKey, stripTime } from '../utils/cycleUtils';
 import { Droplet, ChevronLeft, ChevronRight, Thermometer, Moon, Zap } from 'lucide-react';
+import { getDayLog, upsertDayLog } from '../api/cycleApi.js';
+
 
 export default function Calendar({ activeNav, onNavigate, cycleData }) {
   const { loggedPeriods, cycleLength, selectedDate, setSelectedDate, togglePeriodDay } = cycleData;
   const [viewMonth, setViewMonth] = useState(new Date(selectedDate));
-
   const [activeTab, setActiveTab] = useState('flow');
-  const [selectedFlow, setSelectedFlow] = useState('Light');
-  const [insightsRange, setInsightsRange] = useState('monthly');
-
+  const [selectedFlow, setSelectedFlow] = useState(null);
+  const [selectedSymptoms, setSelectedSymptoms] = useState([]);
+  const [customSymptomText, setCustomSymptomText] = useState('');
+  const [selectedMoods, setSelectedMoods] = useState([]);
+  const [notesText, setNotesText] = useState('');
+  const [dayLogLoading, setDayLogLoading] = useState(false);
+  const [insightsRange, setInsightsRange] = useState('monthly')
   const year = viewMonth.getFullYear();
   const month = viewMonth.getMonth();
   const firstDay = new Date(year, month, 1);
@@ -37,6 +42,8 @@ export default function Calendar({ activeNav, onNavigate, cycleData }) {
 
   const flowOptions = ['Spotting', 'Light', 'Medium', 'Heavy'];
   const tabs = ['flow', 'symptoms', 'mood', 'notes'];
+  const SYMPTOM_OPTIONS = ['Cramps', 'Headache', 'Bloating', 'Fatigue', 'Nausea', 'Backache', 'Tender Breasts', 'Acne', 'Cravings', 'Insomnia'];
+  const MOOD_OPTIONS = ['Happy', 'Calm', 'Irritable', 'Sad', 'Anxious', 'Energetic'];
 
   // simple inline sparkline data — swap with real logged data when available
   const trendData = useMemo(
@@ -56,6 +63,75 @@ export default function Calendar({ activeNav, onNavigate, cycleData }) {
       })
       .join(' ');
   };
+
+  useEffect(() => {
+    if (!cycleData?.userId) return;
+    setDayLogLoading(true);
+    getDayLog(cycleData.userId, selectedDate)
+      .then((log) => {
+        setSelectedFlow(log?.flow ?? null);
+        setSelectedSymptoms(log?.symptoms ?? []);
+        setSelectedMoods(log?.mood ?? []);
+        setNotesText(log?.notes ?? '');
+      })
+      .catch((err) => console.error('Failed to load day log:', err))
+      .finally(() => setDayLogLoading(false));
+  }, [selectedDate, cycleData?.userId]);
+
+  const handleSelectFlow = async (flow) => {
+    setSelectedFlow(flow);
+    try {
+      await upsertDayLog(cycleData.userId, selectedDate, { flow });
+    } catch (err) {
+      console.error('Failed to save flow:', err);
+    }
+  };
+
+  const handleToggleSymptom = async (symptom) => {
+    const updated = selectedSymptoms.includes(symptom)
+      ? selectedSymptoms.filter((s) => s !== symptom)
+      : [...selectedSymptoms, symptom];
+    setSelectedSymptoms(updated);
+    try {
+      await upsertDayLog(cycleData.userId, selectedDate, { symptoms: updated });
+    } catch (err) {
+      console.error('Failed to save symptoms:', err);
+    }
+  };
+
+  const handleAddCustomSymptom = async () => {
+    const text = customSymptomText.trim();
+    if (!text) return;
+    const updated = [...selectedSymptoms, text];
+    setSelectedSymptoms(updated);
+    setCustomSymptomText('');
+    try {
+      await upsertDayLog(cycleData.userId, selectedDate, { symptoms: updated });
+    } catch (err) {
+      console.error('Failed to save custom symptom:', err);
+    }
+  };
+
+  const handleToggleMood = async (mood) => {
+    const updated = selectedMoods.includes(mood)
+      ? selectedMoods.filter((m) => m !== mood)
+      : [...selectedMoods, mood];
+    setSelectedMoods(updated);
+    try {
+      await upsertDayLog(cycleData.userId, selectedDate, { mood: updated });
+    } catch (err) {
+      console.error('Failed to save mood:', err);
+    }
+  };
+
+  const handleSaveNotes = async () => {
+    try {
+      await upsertDayLog(cycleData.userId, selectedDate, { notes: notesText });
+    } catch (err) {
+      console.error('Failed to save notes:', err);
+    }
+  };
+
 
   return (
     <div className="min-h-screen bg-[#fdfaf8] text-stone-800 relative overflow-hidden">
@@ -154,17 +230,15 @@ export default function Calendar({ activeNav, onNavigate, cycleData }) {
                   <button
                     key={i}
                     onClick={() => handleDayClick(date)}
-                    className={`aspect-square rounded-xl flex flex-col items-center justify-center text-sm font-mono transition-all cursor-pointer relative ${
-                      isSelected ? 'ring-2 ring-rose-500' : ''
-                    } ${
-                      info.isPeriod
+                    className={`aspect-square rounded-xl flex flex-col items-center justify-center text-sm font-mono transition-all cursor-pointer relative ${isSelected ? 'ring-2 ring-rose-500' : ''
+                      } ${info.isPeriod
                         ? 'bg-rose-100 text-rose-700 font-bold'
                         : info.isFertile
-                        ? 'bg-emerald-50 text-emerald-700 font-bold'
-                        : info.isPredicted
-                        ? 'bg-stone-100 text-stone-500'
-                        : 'bg-stone-50 text-stone-600 hover:bg-stone-100'
-                    }`}
+                          ? 'bg-emerald-50 text-emerald-700 font-bold'
+                          : info.isPredicted
+                            ? 'bg-stone-100 text-stone-500'
+                            : 'bg-stone-50 text-stone-600 hover:bg-stone-100'
+                      }`}
                   >
                     {date.getDate()}
                     {info.isPeriod && <span className="w-1.5 h-1.5 rounded-full bg-rose-600 absolute bottom-1.5" />}
@@ -204,9 +278,8 @@ export default function Calendar({ activeNav, onNavigate, cycleData }) {
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`flex-1 text-center capitalize py-1.5 rounded-lg cursor-pointer transition-all ${
-                    activeTab === tab ? 'bg-white text-rose-600 shadow-sm font-bold' : 'text-stone-400'
-                  }`}
+                  className={`flex-1 text-center capitalize py-1.5 rounded-lg cursor-pointer transition-all ${activeTab === tab ? 'bg-white text-rose-600 shadow-sm font-bold' : 'text-stone-400'
+                    }`}
                 >
                   {tab}
                 </button>
@@ -220,12 +293,11 @@ export default function Calendar({ activeNav, onNavigate, cycleData }) {
                   {flowOptions.map((flow) => (
                     <button
                       key={flow}
-                      onClick={() => setSelectedFlow(flow)}
-                      className={`text-center px-2 py-2 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
-                        selectedFlow === flow
-                          ? 'bg-rose-100 border-2 border-rose-500 text-rose-700'
-                          : 'bg-white/70 border border-stone-200 text-stone-600'
-                      }`}
+                      onClick={() => handleSelectFlow(flow)}
+                      className={`text-center px-2 py-2 rounded-xl text-xs font-semibold cursor-pointer transition-all ${selectedFlow === flow
+                        ? 'bg-rose-100 border-2 border-rose-500 text-rose-700'
+                        : 'bg-white/70 border border-stone-200 text-stone-600'
+                        }`}
                     >
                       {flow}
                     </button>
@@ -233,9 +305,83 @@ export default function Calendar({ activeNav, onNavigate, cycleData }) {
                 </div>
               </div>
             )}
-            {activeTab === 'symptoms' && <p className="text-xs text-stone-400 font-mono">Symptom tracking UI goes here.</p>}
-            {activeTab === 'mood' && <p className="text-xs text-stone-400 font-mono">Mood tracking UI goes here.</p>}
-            {activeTab === 'notes' && <p className="text-xs text-stone-400 font-mono">Notes UI goes here.</p>}
+            {activeTab === 'symptoms' && (
+              <div className="space-y-3">
+                <p className="text-[10px] font-mono text-stone-400 mb-1">Symptoms</p>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {SYMPTOM_OPTIONS.map((symptom) => (
+                    <button
+                      key={symptom}
+                      onClick={() => handleToggleSymptom(symptom)}
+                      className={`text-left px-2.5 py-1.5 rounded-lg text-[11px] font-semibold cursor-pointer transition-all ${selectedSymptoms.includes(symptom)
+                        ? 'bg-rose-100 border border-rose-400 text-rose-700'
+                        : 'bg-white/70 border border-stone-200 text-stone-600'
+                        }`}
+                    >
+                      {symptom}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex gap-1.5 pt-1">
+                  <input
+                    type="text"
+                    value={customSymptomText}
+                    onChange={(e) => setCustomSymptomText(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddCustomSymptom()}
+                    placeholder="Add custom symptom..."
+                    className="flex-1 px-2.5 py-1.5 rounded-lg bg-white/70 border border-stone-200 text-[11px] text-stone-700 focus:outline-none focus:border-rose-300"
+                  />
+                  <button
+                    onClick={handleAddCustomSymptom}
+                    className="px-3 py-1.5 rounded-lg bg-rose-600 text-white text-[11px] font-bold cursor-pointer"
+                  >
+                    Add
+                  </button>
+                </div>
+                {selectedSymptoms.filter((s) => !SYMPTOM_OPTIONS.includes(s)).length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {selectedSymptoms.filter((s) => !SYMPTOM_OPTIONS.includes(s)).map((s) => (
+                      <span key={s} className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-stone-100 text-stone-600">{s}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            {activeTab === 'mood' && (
+              <div>
+                <p className="text-[10px] font-mono text-stone-400 mb-2">How are you feeling? (select all that apply)</p>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {MOOD_OPTIONS.map((mood) => (
+                    <button
+                      key={mood}
+                      onClick={() => handleToggleMood(mood)}
+                      className={`text-center px-2 py-2 rounded-xl text-xs font-semibold cursor-pointer transition-all ${selectedMoods.includes(mood)
+                        ? 'bg-rose-100 border-2 border-rose-500 text-rose-700'
+                        : 'bg-white/70 border border-stone-200 text-stone-600'
+                        }`}
+                    >
+                      {mood}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {activeTab === 'notes' && (
+              <div className="space-y-2">
+                <textarea
+                  value={notesText}
+                  onChange={(e) => setNotesText(e.target.value)}
+                  placeholder="Any additional notes for today..."
+                  className="w-full h-24 p-3 rounded-xl bg-white/70 border border-stone-200 text-xs text-stone-700 focus:outline-none focus:border-rose-300 resize-none"
+                />
+                <button
+                  onClick={handleSaveNotes}
+                  className="w-full py-2 rounded-xl bg-rose-600 text-white text-xs font-bold cursor-pointer"
+                >
+                  Save Notes
+                </button>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-2 mt-1">
               <div className="rounded-xl bg-emerald-50 p-3">
@@ -263,17 +409,15 @@ export default function Calendar({ activeNav, onNavigate, cycleData }) {
             <div className="flex gap-1 bg-stone-100 rounded-full p-1 text-xs">
               <button
                 onClick={() => setInsightsRange('monthly')}
-                className={`px-4 py-1.5 rounded-full font-semibold cursor-pointer ${
-                  insightsRange === 'monthly' ? 'bg-rose-800 text-white' : 'text-stone-500'
-                }`}
+                className={`px-4 py-1.5 rounded-full font-semibold cursor-pointer ${insightsRange === 'monthly' ? 'bg-rose-800 text-white' : 'text-stone-500'
+                  }`}
               >
                 Monthly
               </button>
               <button
                 onClick={() => setInsightsRange('weekly')}
-                className={`px-4 py-1.5 rounded-full font-semibold cursor-pointer ${
-                  insightsRange === 'weekly' ? 'bg-rose-800 text-white' : 'text-stone-500'
-                }`}
+                className={`px-4 py-1.5 rounded-full font-semibold cursor-pointer ${insightsRange === 'weekly' ? 'bg-rose-800 text-white' : 'text-stone-500'
+                  }`}
               >
                 Weekly
               </button>
