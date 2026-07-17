@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import TopNav from '../components/TopNav.jsx';
 import { getDayInfo, toKey, stripTime } from '../utils/cycleUtils';
 import { Droplet, ChevronLeft, ChevronRight, Thermometer, Moon, Zap } from 'lucide-react';
-import { getDayLog, upsertDayLog } from '../api/cycleApi.js';
+import { getDayLog, upsertDayLog } from '../api/cycleapi.js';
 
 
 export default function Calendar({ activeNav, onNavigate, cycleData }) {
