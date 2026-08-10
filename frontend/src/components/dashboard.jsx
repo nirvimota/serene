@@ -38,7 +38,7 @@ export default function Dashboard({ activeNav, onNavigate, cycleData }) {
         className="fixed inset-0 pointer-events-none transition-transform duration-700 ease-out z-0 opacity-50 scale-105"
         style={{
           transform: `translate3d(${mousePos.x * -10}px, ${scrollY * -0.05}px, 0px)`,
-          backgroundImage: "url('/src/assets/images/aura_light_bg_1782974447031.jpg')",
+          backgroundImage: "url('/images/aura_light_bg_1782974447031.jpg')",
           backgroundSize: 'cover',
           backgroundPosition: 'center',
         }}
@@ -49,7 +49,7 @@ export default function Dashboard({ activeNav, onNavigate, cycleData }) {
         className="fixed inset-x-0 top-0 bottom-0 pointer-events-none transition-all duration-1000 ease-out z-0 opacity-15"
         style={{
           transform: `translate3d(${mousePos.x * 20}px, ${scrollY * -0.1}px, 0px) rotate(${scrollY * 0.003}deg)`,
-          backgroundImage: "url('/src/assets/images/aura_3d_flowers_1782974462579.jpg')",
+          backgroundImage: "url('/images/aura_3d_flowers_1782974462579.jpg')",
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           mixBlendMode: 'multiply'
@@ -194,15 +194,14 @@ export default function Dashboard({ activeNav, onNavigate, cycleData }) {
                       {date.toLocaleDateString('en-US', { weekday: 'narrow' })}
                     </span>
                     <div
-                      className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-mono font-semibold transition-all ${
-                        info.isPeriod
-                          ? 'bg-rose-500 text-white shadow-sm'
-                          : info.isFertile
+                      className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-mono font-semibold transition-all ${info.isPeriod
+                        ? 'bg-rose-500 text-white shadow-sm'
+                        : info.isFertile
                           ? 'bg-emerald-100 text-emerald-700'
                           : info.isToday
-                          ? 'ring-2 ring-rose-300 text-stone-700'
-                          : 'text-stone-600 hover:bg-stone-100'
-                      }`}
+                            ? 'ring-2 ring-rose-300 text-stone-700'
+                            : 'text-stone-600 hover:bg-stone-100'
+                        }`}
                     >
                       {date.getDate()}
                     </div>
@@ -226,7 +225,7 @@ export default function Dashboard({ activeNav, onNavigate, cycleData }) {
           {/* Fact of the Day */}
           <div className="rounded-3xl overflow-hidden relative h-56 shadow-md group cursor-pointer">
             <img
-              src="/src/assets/images/fact_rose.jpg"
+              src="/images/fact_rose.jpg"
               alt="Fact of the day"
               className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
             />

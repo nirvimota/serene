@@ -185,7 +185,7 @@ export default function Journal({ activeNav, onNavigate, cycleData }) {
         className="fixed inset-0 pointer-events-none transition-transform duration-700 ease-out z-0 opacity-50 scale-105"
         style={{
           transform: `translate3d(${mousePos.x * -10}px, ${scrollY * -0.05}px, 0px)`,
-          backgroundImage: "url('/src/assets/images/aura_light_bg_1782974447031.jpg')",
+          backgroundImage: "url('/images/aura_light_bg_1782974447031.jpg')",
           backgroundSize: 'cover',
           backgroundPosition: 'center',
         }}
@@ -196,7 +196,7 @@ export default function Journal({ activeNav, onNavigate, cycleData }) {
         className="fixed inset-x-0 top-0 bottom-0 pointer-events-none transition-all duration-1000 ease-out z-0 opacity-15"
         style={{
           transform: `translate3d(${mousePos.x * 20}px, ${scrollY * -0.1}px, 0px) rotate(${scrollY * 0.003}deg)`,
-          backgroundImage: "url('/src/assets/images/fact_rose.jpg')",
+          backgroundImage: "url('/images/fact_rose.jpg')",
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           mixBlendMode: 'multiply'
@@ -229,11 +229,10 @@ export default function Journal({ activeNav, onNavigate, cycleData }) {
               <button
                 key={f}
                 onClick={() => setActiveFilter(f)}
-                className={`px-3 py-1.5 rounded-full text-[11px] font-mono font-semibold border transition-all cursor-pointer ${
-                  activeFilter === f
-                    ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
-                    : 'bg-white/70 text-stone-500 border-stone-200/70 hover:border-stone-300'
-                }`}
+                className={`px-3 py-1.5 rounded-full text-[11px] font-mono font-semibold border transition-all cursor-pointer ${activeFilter === f
+                  ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+                  : 'bg-white/70 text-stone-500 border-stone-200/70 hover:border-stone-300'
+                  }`}
               >
                 {f}
               </button>
@@ -301,9 +300,8 @@ export default function Journal({ activeNav, onNavigate, cycleData }) {
                 <button
                   key={label}
                   onClick={() => setEntryType(label)}
-                  className={`px-3 py-1.5 rounded-lg text-[10px] font-mono font-bold uppercase transition-all cursor-pointer ${
-                    entryType === label ? 'bg-white text-rose-700 shadow-sm' : 'text-stone-400'
-                  }`}
+                  className={`px-3 py-1.5 rounded-lg text-[10px] font-mono font-bold uppercase transition-all cursor-pointer ${entryType === label ? 'bg-white text-rose-700 shadow-sm' : 'text-stone-400'
+                    }`}
                 >
                   {label}
                 </button>
@@ -328,11 +326,10 @@ export default function Journal({ activeNav, onNavigate, cycleData }) {
                     <button
                       key={name}
                       onClick={() => setSelectedMood(name)}
-                      className={`py-4 rounded-2xl border flex flex-col items-center justify-center space-y-1.5 transition-all cursor-pointer ${
-                        isSelected
-                          ? 'bg-rose-50 border-rose-300 shadow-sm'
-                          : 'bg-stone-50/70 border-stone-200/60 hover:border-stone-300'
-                      }`}
+                      className={`py-4 rounded-2xl border flex flex-col items-center justify-center space-y-1.5 transition-all cursor-pointer ${isSelected
+                        ? 'bg-rose-50 border-rose-300 shadow-sm'
+                        : 'bg-stone-50/70 border-stone-200/60 hover:border-stone-300'
+                        }`}
                     >
                       <Icon size={18} className={isSelected ? 'text-rose-600' : 'text-stone-400'} />
                       <span className={`text-[10px] font-mono font-semibold ${isSelected ? 'text-rose-700' : 'text-stone-500'}`}>
@@ -353,11 +350,10 @@ export default function Journal({ activeNav, onNavigate, cycleData }) {
                     <button
                       key={symptom}
                       onClick={() => toggleSymptom(symptom)}
-                      className={`px-3 py-1.5 rounded-full text-[11px] font-mono font-semibold border transition-all cursor-pointer ${
-                        isSelected
-                          ? 'bg-rose-100 border-rose-300 text-rose-700'
-                          : 'bg-stone-50/70 border-stone-200/60 text-stone-500 hover:border-stone-300'
-                      }`}
+                      className={`px-3 py-1.5 rounded-full text-[11px] font-mono font-semibold border transition-all cursor-pointer ${isSelected
+                        ? 'bg-rose-100 border-rose-300 text-rose-700'
+                        : 'bg-stone-50/70 border-stone-200/60 text-stone-500 hover:border-stone-300'
+                        }`}
                     >
                       {symptom}
                     </button>
