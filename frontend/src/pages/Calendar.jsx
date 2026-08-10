@@ -1,12 +1,17 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import TopNav from '../components/TopNav.jsx';
-import { getDayInfo, toKey, stripTime } from '../utils/cycleUtils';
-import { Droplet, ChevronLeft, ChevronRight, Thermometer, Moon, Zap, AlertTriangle, X, Stethoscope } from 'lucide-react';
+
+import { getDayInfo, toKey, stripTime, getCyclePredictions } from '../utils/cycleUtils';
+import { Droplet, ChevronLeft, ChevronRight, Thermometer, AlertTriangle, X, Stethoscope, TrendingUp, Sparkles, CalendarDays, Download } from 'lucide-react';
 import { getDayLog, upsertDayLog } from '../api/cycleapi.js';
+import { useToast } from '../components/Toast.jsx';
+import { supabase } from '../supabaseClient';
+import SymptomAnalytics from '../components/SymptomAnalytics.jsx';
+
 
 
 export default function Calendar({ activeNav, onNavigate, cycleData }) {
   const { loggedPeriods, cycleLength, selectedDate, setSelectedDate, togglePeriodDay } = cycleData;
+  const { showToast } = useToast();
   const [viewMonth, setViewMonth] = useState(new Date(selectedDate));
   const [activeTab, setActiveTab] = useState('flow');
   const [selectedFlow, setSelectedFlow] = useState(null);
@@ -15,7 +20,6 @@ export default function Calendar({ activeNav, onNavigate, cycleData }) {
   const [selectedMoods, setSelectedMoods] = useState([]);
   const [notesText, setNotesText] = useState('');
   const [dayLogLoading, setDayLogLoading] = useState(false);
-  const [insightsRange, setInsightsRange] = useState('monthly');
   const [showPeriodConfirm, setShowPeriodConfirm] = useState(false);
   const dayDetailsRef = useRef(null);
   const year = viewMonth.getFullYear();
@@ -33,8 +37,14 @@ export default function Calendar({ activeNav, onNavigate, cycleData }) {
   const changeMonth = (delta) => setViewMonth(new Date(year, month + delta, 1));
   const handleDayClick = (date) => setSelectedDate(date);
   const handleLogPeriod = () => setShowPeriodConfirm(true);
-  const confirmLogPeriod = () => {
-    togglePeriodDay(selectedDate);
+  const confirmLogPeriod = async () => {
+    if (typeof togglePeriodDay === 'function') {
+      await togglePeriodDay(selectedDate);
+      const isLogged = loggedPeriods.includes(toKey(stripTime(selectedDate)));
+      showToast(isLogged ? 'Period day removed ✓' : 'Period day logged! Predictions updated ✨', 'success');
+    } else {
+      console.warn('togglePeriodDay is not a function — check what cycleData is passing in from the parent.');
+    }
     setShowPeriodConfirm(false);
   };
   const handleGoToSymptoms = () => {
@@ -55,29 +65,41 @@ export default function Calendar({ activeNav, onNavigate, cycleData }) {
   const SYMPTOM_OPTIONS = ['Cramps', 'Headache', 'Bloating', 'Fatigue', 'Nausea', 'Backache', 'Tender Breasts', 'Acne', 'Cravings', 'Insomnia'];
   const MOOD_OPTIONS = ['Happy', 'Calm', 'Irritable', 'Sad', 'Anxious', 'Energetic'];
 
-  // simple inline sparkline data — swap with real logged data when available
-  const trendData = useMemo(
-    () => [40, 55, 48, 62, 58, 70, 65].map((v, i) => ({ day: i, energy: v, sleep: v - 12 + Math.random() * 10 })),
-    [insightsRange]
+  // Cycle predictions based on the last 5 months of logged period starts
+  const predictions = useMemo(
+    () => getCyclePredictions(loggedPeriods, cycleLength || 28, 5),
+    [loggedPeriods, cycleLength]
   );
-  const weekLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-  const buildPath = (key) => {
+  const daysUntilNextPeriod = predictions.predictedNextPeriodStart
+    ? Math.round((stripTime(predictions.predictedNextPeriodStart) - stripTime(new Date())) / 86400000)
+    : null;
+
+  const formatShortDate = (date) =>
+    date ? date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—';
+
+  // Bar chart of real logged cycle lengths (history), scaled against a
+  // sensible day range so short/long cycles are still readable.
+  const cycleChartMax = useMemo(() => {
+    if (!predictions.history.length) return 35;
+    return Math.max(35, predictions.longestCycle + 4);
+  }, [predictions]);
+
+  const buildCycleBar = (length, i, total) => {
     const w = 560, h = 140, pad = 20;
-    const max = 100, min = 0;
-    return trendData
-      .map((d, i) => {
-        const x = pad + (i / (trendData.length - 1)) * (w - pad * 2);
-        const y = h - pad - ((d[key] - min) / (max - min)) * (h - pad * 2);
-        return `${i === 0 ? 'M' : 'L'}${x},${y}`;
-      })
-      .join(' ');
+    const barGap = 14;
+    const barWidth = (w - pad * 2 - barGap * (total - 1)) / total;
+    const x = pad + i * (barWidth + barGap);
+    const barHeight = (length / cycleChartMax) * (h - pad * 2);
+    const y = h - pad - barHeight;
+    return { x, y, width: barWidth, height: barHeight };
   };
 
   useEffect(() => {
     if (!cycleData?.userId) return;
     setDayLogLoading(true);
-    getDayLog(cycleData.userId, selectedDate)
+    const dateKey = toKey(stripTime(selectedDate));
+    getDayLog(cycleData.userId, dateKey)
       .then((log) => {
         setSelectedFlow(log?.flow ?? null);
         setSelectedSymptoms(log?.symptoms ?? []);
@@ -91,7 +113,8 @@ export default function Calendar({ activeNav, onNavigate, cycleData }) {
   const handleSelectFlow = async (flow) => {
     setSelectedFlow(flow);
     try {
-      await upsertDayLog(cycleData.userId, selectedDate, { flow });
+      const dateKey = toKey(stripTime(selectedDate));
+      await upsertDayLog(cycleData.userId, dateKey, { flow: flow.toLowerCase() });
     } catch (err) {
       console.error('Failed to save flow:', err);
     }
@@ -103,7 +126,8 @@ export default function Calendar({ activeNav, onNavigate, cycleData }) {
       : [...selectedSymptoms, symptom];
     setSelectedSymptoms(updated);
     try {
-      await upsertDayLog(cycleData.userId, selectedDate, { symptoms: updated });
+      const dateKey = toKey(stripTime(selectedDate));
+      await upsertDayLog(cycleData.userId, dateKey, { symptoms: updated });
     } catch (err) {
       console.error('Failed to save symptoms:', err);
     }
@@ -116,7 +140,8 @@ export default function Calendar({ activeNav, onNavigate, cycleData }) {
     setSelectedSymptoms(updated);
     setCustomSymptomText('');
     try {
-      await upsertDayLog(cycleData.userId, selectedDate, { symptoms: updated });
+      const dateKey = toKey(stripTime(selectedDate));
+      await upsertDayLog(cycleData.userId, dateKey, { symptoms: updated });
     } catch (err) {
       console.error('Failed to save custom symptom:', err);
     }
@@ -128,7 +153,8 @@ export default function Calendar({ activeNav, onNavigate, cycleData }) {
       : [...selectedMoods, mood];
     setSelectedMoods(updated);
     try {
-      await upsertDayLog(cycleData.userId, selectedDate, { mood: updated });
+      const dateKey = toKey(stripTime(selectedDate));
+      await upsertDayLog(cycleData.userId, dateKey, { mood: updated });
     } catch (err) {
       console.error('Failed to save mood:', err);
     }
@@ -136,7 +162,8 @@ export default function Calendar({ activeNav, onNavigate, cycleData }) {
 
   const handleSaveNotes = async () => {
     try {
-      await upsertDayLog(cycleData.userId, selectedDate, { notes: notesText });
+      const dateKey = toKey(stripTime(selectedDate));
+      await upsertDayLog(cycleData.userId, dateKey, { notes: notesText });
     } catch (err) {
       console.error('Failed to save notes:', err);
     }
@@ -148,7 +175,7 @@ export default function Calendar({ activeNav, onNavigate, cycleData }) {
       <div className="fixed top-[-10%] left-[15%] w-[500px] h-[500px] rounded-full bg-rose-200/30 blur-[130px] pointer-events-none z-0 animate-pulse" style={{ animationDuration: '6s' }} />
       <div className="fixed bottom-[5%] right-[10%] w-[500px] h-[500px] rounded-full bg-amber-100/30 blur-[130px] pointer-events-none z-0 animate-pulse" style={{ animationDuration: '6s', animationDelay: '3s' }} />
 
-      <TopNav activeNav={activeNav} onNavigate={onNavigate} />
+
 
       <main className="relative z-20 max-w-7xl mx-auto px-6 py-8 flex flex-col gap-6">
 
@@ -208,7 +235,41 @@ export default function Calendar({ activeNav, onNavigate, cycleData }) {
               >
                 <Stethoscope size={13} /> Log Symptoms
               </button>
-              <button className="w-full bg-white/70 border border-stone-200 text-stone-600 text-xs font-semibold py-2.5 rounded-xl cursor-pointer hover:bg-stone-50 transition-all">
+              <button
+                onClick={async () => {
+                  try {
+                    const { data: logs, error } = await supabase
+                      .from('cycle_logs')
+                      .select('*')
+                      .eq('user_id', cycleData?.userId)
+                      .order('log_date', { ascending: true });
+
+                    if (error) throw error;
+                    if (!logs || logs.length === 0) {
+                      showToast('No logged period history to export', 'info');
+                      return;
+                    }
+
+                    const headers = ['log_date', 'is_period', 'is_cycle_start', 'flow', 'symptoms', 'mood', 'basal_temp', 'notes'];
+                    const rows = logs.map(l => headers.map(h => JSON.stringify(l[h] ?? '')).join(','));
+                    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows].join('\n');
+
+                    const encodedUri = encodeURI(csvContent);
+                    const link = document.createElement('a');
+                    link.setAttribute('href', encodedUri);
+                    link.setAttribute('download', `serene_cycle_report_${new Date().toISOString().slice(0, 10)}.csv`);
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+
+                    showToast('Exported cycle report to CSV ✓', 'success');
+                  } catch (err) {
+                    showToast('Export failed: ' + (err.message || 'Error'), 'error');
+                  }
+                }}
+                className="w-full bg-white/70 border border-stone-200 text-stone-600 text-xs font-semibold py-2.5 rounded-xl cursor-pointer hover:bg-stone-50 transition-all flex items-center justify-center gap-1.5"
+              >
+                <Download size={13} className="text-stone-500" />
                 Export Report
               </button>
             </div>
@@ -415,68 +476,104 @@ export default function Calendar({ activeNav, onNavigate, cycleData }) {
           </div>
         </div>
 
-        {/* BOTTOM — Insights & Trends */}
+        {/* BOTTOM — Cycle Predictions (replaces old fake Insights & Trends) */}
         <div className="rounded-3xl p-6 bg-white/75 border border-stone-200/40 backdrop-blur-md">
-          <div className="flex items-center justify-between mb-1 flex-wrap gap-3">
-            <div>
-              <h3 className="text-lg font-sans font-extrabold text-stone-900">Insights & Trends</h3>
-              <p className="text-xs text-stone-400 font-mono">Correlation between energy levels and sleep quality over the last 30 days.</p>
-            </div>
-            <div className="flex gap-1 bg-stone-100 rounded-full p-1 text-xs">
-              <button
-                onClick={() => setInsightsRange('monthly')}
-                className={`px-4 py-1.5 rounded-full font-semibold cursor-pointer ${insightsRange === 'monthly' ? 'bg-rose-800 text-white' : 'text-stone-500'
-                  }`}
-              >
-                Monthly
-              </button>
-              <button
-                onClick={() => setInsightsRange('weekly')}
-                className={`px-4 py-1.5 rounded-full font-semibold cursor-pointer ${insightsRange === 'weekly' ? 'bg-rose-800 text-white' : 'text-stone-500'
-                  }`}
-              >
-                Weekly
-              </button>
-            </div>
+          <div className="flex items-center gap-2 mb-1">
+            <CalendarDays size={16} className="text-rose-600" />
+            <h3 className="text-lg font-sans font-extrabold text-stone-900">Cycle Predictions</h3>
           </div>
+          <p className="text-xs text-stone-400 font-mono mb-5">
+            Based on your logged periods over the last 5 months.
+          </p>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mt-5">
-            <div className="lg:col-span-2">
-              <div className="flex items-center gap-4 mb-2 text-[11px] font-mono text-stone-500">
-                <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-rose-500" /> Energy</span>
-                <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-400" /> Sleep Quality</span>
+          {predictions.hasEnoughData ? (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+              {/* Cycle length history — real bar chart, no fabricated data */}
+              <div className="lg:col-span-2">
+                <p className="text-[11px] font-mono text-stone-500 mb-2">Cycle length by period, most recent on the right</p>
+                <svg viewBox="0 0 560 140" className="w-full h-36">
+                  {predictions.history.map((entry, i) => {
+                    const { x, y, width, height } = buildCycleBar(entry.length, i, predictions.history.length);
+                    return (
+                      <g key={i}>
+                        <rect x={x} y={y} width={width} height={height} rx="4" fill="#e11d48" opacity={i === predictions.history.length - 1 ? 1 : 0.35} />
+                        <text x={x + width / 2} y={y - 6} textAnchor="middle" fontSize="10" fontFamily="monospace" fill="#78716c">
+                          {entry.length}d
+                        </text>
+                      </g>
+                    );
+                  })}
+                </svg>
+                <div
+                  className="grid text-center text-[10px] font-mono text-stone-400 mt-1"
+                  style={{ gridTemplateColumns: `repeat(${predictions.history.length}, minmax(0, 1fr))` }}
+                >
+                  {predictions.history.map((entry, i) => (
+                    <span key={i}>{formatShortDate(entry.endDate)}</span>
+                  ))}
+                </div>
               </div>
-              <svg viewBox="0 0 560 140" className="w-full h-36">
-                <path d={buildPath('energy')} fill="none" stroke="#e11d48" strokeWidth="2.5" strokeLinecap="round" />
-                <path d={buildPath('sleep')} fill="none" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round" />
-              </svg>
-              <div className="grid grid-cols-7 text-center text-[10px] font-mono text-stone-400 mt-1">
-                {weekLabels.map((d) => <span key={d}>{d}</span>)}
+
+              {/* Prediction cards */}
+              <div className="flex flex-col gap-3">
+                <div className="rounded-xl bg-rose-50 p-4 flex gap-3 items-start">
+                  <div className="w-8 h-8 rounded-full bg-rose-100 flex items-center justify-center shrink-0">
+                    <Droplet size={14} className="text-rose-700" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-stone-900">Next Period Predicted</p>
+                    <p className="text-[11px] text-stone-500 mt-0.5">
+                      {formatShortDate(predictions.predictedNextPeriodStart)}
+                      {daysUntilNextPeriod !== null && (
+                        <> — {daysUntilNextPeriod > 0 ? `in ${daysUntilNextPeriod} days` : daysUntilNextPeriod === 0 ? 'today' : `${Math.abs(daysUntilNextPeriod)} days overdue`}</>
+                      )}
+                    </p>
+                  </div>
+                </div>
+                <div className="rounded-xl bg-emerald-50 p-4 flex gap-3 items-start">
+                  <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
+                    <Sparkles size={14} className="text-emerald-700" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-stone-900">Predicted Fertile Window</p>
+                    <p className="text-[11px] text-stone-500 mt-0.5">
+                      {formatShortDate(predictions.predictedFertileStart)} – {formatShortDate(predictions.predictedFertileEnd)}
+                    </p>
+                  </div>
+                </div>
+                <div className="rounded-xl bg-amber-50 p-4 flex gap-3 items-start">
+                  <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+                    <TrendingUp size={14} className="text-amber-700" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-stone-900">Avg. Cycle Length</p>
+                    <p className="text-[11px] text-stone-500 mt-0.5">
+                      {predictions.avgCycleLength} days, based on {predictions.cyclesUsed} recent cycle{predictions.cyclesUsed === 1 ? '' : 's'}
+                      {predictions.shortestCycle !== predictions.longestCycle && (
+                        <> ({predictions.shortestCycle}–{predictions.longestCycle} day range)</>
+                      )}
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
-
-            <div className="flex flex-col gap-3">
-              <div className="rounded-xl bg-emerald-50 p-4 flex gap-3 items-start">
-                <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
-                  <Moon size={14} className="text-emerald-700" />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-stone-900">Sleep Pattern</p>
-                  <p className="text-[11px] text-stone-500 mt-0.5">Your sleep duration increases by 15% during the Luteal phase.</p>
-                </div>
+          ) : (
+            <div className="rounded-xl bg-stone-50 p-4 flex gap-3 items-start">
+              <div className="w-8 h-8 rounded-full bg-stone-100 flex items-center justify-center shrink-0">
+                <TrendingUp size={14} className="text-stone-500" />
               </div>
-              <div className="rounded-xl bg-rose-50 p-4 flex gap-3 items-start">
-                <div className="w-8 h-8 rounded-full bg-rose-100 flex items-center justify-center shrink-0">
-                  <Zap size={14} className="text-rose-700" />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-stone-900">Energy Peak</p>
-                  <p className="text-[11px] text-stone-500 mt-0.5">You log the highest activity levels during the Fertile window.</p>
-                </div>
+              <div>
+                <p className="text-xs font-bold text-stone-900">Not Enough Data Yet</p>
+                <p className="text-[11px] text-stone-500 mt-0.5">
+                  Log at least two full periods and predictions will appear here automatically.
+                </p>
               </div>
             </div>
-          </div>
+          )}
         </div>
+
+        {/* ── Symptom & Mood Spectrum Analytics ── */}
+        <SymptomAnalytics userId={cycleData?.userId} />
 
       </main>
 
@@ -538,3 +635,32 @@ export default function Calendar({ activeNav, onNavigate, cycleData }) {
     </div>
   );
 }
+
+
+/*Recent work in this session:
+
+Project: Serene Cycle (React + Vite menstrual tracking app, rose/amber glassmorphism aesthetic, stone/rose/emerald/amber Tailwind palette, `font-sans`/`font-mono` mix, `glass-panel` class, Supabase backend)
+
+1. Learn.jsx — Added real, sourced articles (ACOG, Mayo Clinic, Cleveland Clinic, etc.) on birth control, pregnancy science, and period myths vs. facts. Updated the existing `MYTHS` array with sourced links, and added a new "Trusted Reads" section (tabbed: Birth Control / Pregnancy Science / Period Science) between the Myths section and Resource Library. All links open the real source rather than reproducing article text (copyright-safe).
+
+2. Calendar.jsx bug fix — `confirmLogPeriod` was calling `togglePeriodDay(selectedDate)` from the `cycleData` prop, plus a broken direct Supabase write attempt (wrong column name `isPeriod` that doesn't exist on `cycle_logs`) — removed that bad write, kept it calling `togglePeriodDay` only. Confirmed working now.
+
+3. Cycle predictions built from real data (no fabricated inputs):
+
+   * `cycleUtils.js` — added `getCyclePredictions(loggedPeriods, fallbackCycleLength, monthsBack)`. It clusters the flat `loggedPeriods` array (one key per logged day) into actual period start dates, computes real cycle lengths (gaps between starts) from the last 5 months, averages them, and returns: `avgCycleLength`, `shortestCycle`/`longestCycle`, `cyclesUsed`, `history` (array of `{length, endDate}` per cycle — for charting), `predictedNextPeriodStart`, `predictedOvulationDate`, `predictedFertileStart/End`, `hasEnoughData`.
+
+   * `Calendar.jsx` — the old "Insights & Trends" section used fake random energy/sleep data with no real user input backing it. Fully replaced with a "Cycle Predictions" section: a real bar chart of logged cycle lengths (`predictions.history`) on the left, and three cards on the right (Next Period Predicted, Predicted Fertile Window, Avg. Cycle Length). Shows a "Not Enough Data Yet" empty state if fewer than 2 periods are logged.
+
+
+
+Other apps in scope: vestIQ (Indian stock trading app), YieldWise (AgriTech dashboard), portfolio site "Built by Nirvi" — not touched this session.
+
+Open items / things to watch:
+
+
+
+* Haven't seen the parent component/hook that defines `togglePeriodDay` and constructs the `cycleData` object — if further Calendar bugs come up, that file will likely be needed.
+
+* The `pointer-none` typo (should be `pointer-events-none`) in Learn.jsx's flowers-layer div was flagged but left as-is since it predates this session — still unfixed in the actual codebase.
+
+* Resource Library section in Learn.jsx (Sexual Health / Hormone Insights / Holistic Wellness cards) still has no `onClick` handlers — untouched, may need wiring later.*/

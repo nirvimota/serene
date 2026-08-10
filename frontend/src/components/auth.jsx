@@ -52,7 +52,7 @@ export default function Auth({ onAuthSuccess, initialMode = 'login', onBackToLan
       return;
     }
     if (mode === 'signup' && !fullName) {
-      setError('Please supply your full name for cycle matching.');
+      setError('Please supply your full name.');
       return;
     }
 
@@ -73,34 +73,40 @@ export default function Auth({ onAuthSuccess, initialMode = 'login', onBackToLan
             },
           },
         });
+
         if (signUpError) throw signUpError;
 
-        if (!data.session) {
+        // Check if user already exists (Supabase returns user with empty identities when email exists)
+        if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
           setLoading(false);
-          setError('Check your email to confirm your account, then log in.');
+          setError('An account already exists with this email. Please log in.');
           setMode('login');
           return;
         }
 
-        setLoadingStep(1);
-        onAuthSuccess(data.user);
+        // If email confirmation is required by Supabase project settings
+        if (!data.session) {
+          setLoading(false);
+          setError('Account created! Please check your email to confirm, then log in.');
+          setMode('login');
+          return;
+        }
 
         setLoadingStep(1); // "Calibrating hormonal phase indicators..."
-        // profiles row already exists via the on_auth_user_created trigger —
-        // just update it with the cycle-length sliders from this form.
-        const { data: updatedRows, error: profileError } = await supabase
-          .from('profiles')
-          .update({
-            avg_cycle_length: customCycleLength,
-            avg_period_length: customPeriodLength,
-          })
-          .eq('id', data.user.id)
-          .select(); // <-- forces it to return the updated row(s)
+        // Best-effort profile update — won't crash auth if profile table trigger is slow
+        try {
+          await supabase
+            .from('profiles')
+            .upsert({
+              id: data.user.id,
+              avg_cycle_length: customCycleLength,
+              avg_period_length: customPeriodLength,
+            });
+        } catch (profileErr) {
+          console.warn('Profile update warning:', profileErr);
+        }
 
-        if (profileError) throw profileError;
-        console.log('Profile update result:', updatedRows); // [] means RLS blocked it silently
-
-        setLoadingStep(2); // "Generating custom glassmorphic canvas..."
+        setLoadingStep(2); // "Generating custom canvas..."
         onAuthSuccess(data.user);
       } else {
         setLoadingStep(0);
@@ -108,13 +114,15 @@ export default function Auth({ onAuthSuccess, initialMode = 'login', onBackToLan
           email,
           password,
         });
+
         if (signInError) throw signInError;
 
         setLoadingStep(2);
         onAuthSuccess(data.user);
       }
     } catch (err) {
-      setError(err.message || 'Something went wrong. Please try again.');
+      console.error('Auth error:', err);
+      setError(err.message || 'Authentication failed. Please try again.');
       setLoading(false);
     }
   };
@@ -276,8 +284,30 @@ export default function Auth({ onAuthSuccess, initialMode = 'login', onBackToLan
 
             {/* Password */}
             <div className="space-y-1.5">
-              <div className="flex justify-between">
+              <div className="flex justify-between items-center">
                 <label className="text-[10px] font-mono text-stone-400 tracking-wider block uppercase">Password</label>
+                {mode === 'login' && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!email) {
+                        setError('Please enter your email address first.');
+                        return;
+                      }
+                      try {
+                        const { error: resetErr } = await supabase.auth.resetPasswordForEmail(email);
+                        if (resetErr) throw resetErr;
+                        setError('');
+                        alert(`Password reset link sent to ${email}`);
+                      } catch (err) {
+                        setError(err.message || 'Failed to send reset email.');
+                      }
+                    }}
+                    className="text-[10px] font-mono text-rose-500 hover:text-rose-600 cursor-pointer"
+                  >
+                    Forgot password?
+                  </button>
+                )}
               </div>
               <div className="relative">
                 <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400">

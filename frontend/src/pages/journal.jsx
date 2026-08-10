@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import TopNav from '../components/TopNav.jsx';
+
 import {
   Search,
   Smile,
@@ -13,9 +13,15 @@ import {
   Activity
 } from 'lucide-react';
 import { getJournalEntries, createJournalEntry } from '../api/journalApi';
-import { getDailyInsight } from '../api/reflectionapi'
+import SymptomAnalytics from '../components/SymptomAnalytics.jsx';
+
+import { getDailyInsight } from '../api/reflectionapi.js';
+import { upsertDayLog } from '../api/cycleapi.js';
+import { toKey, stripTime } from '../utils/cycleUtils';
 
 const FILTERS = ['All', 'Reflections', 'Symptom Log'];
+
+const SYMPTOMS = ['Cramps', 'Headache', 'Bloating', 'Fatigue', 'Nausea', 'Back Pain', 'Tenderness', 'Acne'];
 
 const MOODS = [
   { name: 'Calm', icon: Smile },
@@ -47,6 +53,7 @@ export default function Journal({ activeNav, onNavigate, cycleData }) {
   const [search, setSearch] = useState('');
   const [activeFilter, setActiveFilter] = useState('All');
   const [selectedMood, setSelectedMood] = useState('Calm');
+  const [selectedSymptoms, setSelectedSymptoms] = useState([]);
   const [entryType, setEntryType] = useState('Reflections'); // matches journalApi's UI label directly
   const [titleText, setTitleText] = useState('');
   const [noteText, setNoteText] = useState('');
@@ -108,6 +115,12 @@ export default function Journal({ activeNav, onNavigate, cycleData }) {
   const today = new Date();
   const todayLabel = today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
+  const toggleSymptom = (symptom) => {
+    setSelectedSymptoms((prev) =>
+      prev.includes(symptom) ? prev.filter((s) => s !== symptom) : [...prev, symptom]
+    );
+  };
+
   // ---- Save entry + get AI reflection ----
   const handleSaveEntry = async () => {
     if (!userId || !noteText.trim()) {
@@ -123,8 +136,19 @@ export default function Journal({ activeNav, onNavigate, cycleData }) {
         content: noteText.trim(),
         mood: selectedMood,
         entryType, // 'Reflections' | 'Symptom Log' — journalApi maps this to the DB enum
-        tags: [selectedMood],
+        tags: [selectedMood, ...selectedSymptoms],
       });
+
+      // symptoms live on cycle_logs, not journal_entries — save them
+      // against today's date so Calendar's Day Details picks them up too
+      if (selectedSymptoms.length) {
+        try {
+          const todayKey = toKey(stripTime(new Date()));
+          await upsertDayLog(userId, todayKey, { symptoms: selectedSymptoms });
+        } catch (err) {
+          console.error('Failed to save symptoms to cycle_logs:', err);
+        }
+      }
 
       setInsightLoading(true);
       try {
@@ -132,6 +156,7 @@ export default function Journal({ activeNav, onNavigate, cycleData }) {
           mood: selectedMood,
           entryText: noteText.trim(),
           cyclePhase,
+          symptoms: selectedSymptoms,
         });
         setInsight(result);
       } catch (err) {
@@ -142,6 +167,7 @@ export default function Journal({ activeNav, onNavigate, cycleData }) {
 
       setTitleText('');
       setNoteText('');
+      setSelectedSymptoms([]);
       await loadEntries();
     } catch (err) {
       console.error('Failed to save entry:', err);
@@ -181,7 +207,7 @@ export default function Journal({ activeNav, onNavigate, cycleData }) {
       <div className="fixed top-[-10%] left-[15%] w-[500px] h-[500px] rounded-full bg-rose-200/30 blur-[130px] pointer-events-none z-0 animate-pulse" style={{ animationDuration: '6s' }} />
       <div className="fixed bottom-[5%] right-[10%] w-[500px] h-[500px] rounded-full bg-amber-100/30 blur-[130px] pointer-events-none z-0 animate-pulse" style={{ animationDuration: '6s', animationDelay: '3s' }} />
 
-      <TopNav activeNav={activeNav} onNavigate={onNavigate} />
+
 
       <main className="relative z-20 max-w-7xl mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
@@ -318,6 +344,28 @@ export default function Journal({ activeNav, onNavigate, cycleData }) {
               </div>
             </div>
 
+            <div className="mt-6">
+              <span className="text-[11px] font-mono font-bold text-stone-500 uppercase tracking-wider block mb-3">Any symptoms today?</span>
+              <div className="flex flex-wrap gap-2">
+                {SYMPTOMS.map((symptom) => {
+                  const isSelected = selectedSymptoms.includes(symptom);
+                  return (
+                    <button
+                      key={symptom}
+                      onClick={() => toggleSymptom(symptom)}
+                      className={`px-3 py-1.5 rounded-full text-[11px] font-mono font-semibold border transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-rose-100 border-rose-300 text-rose-700'
+                          : 'bg-stone-50/70 border-stone-200/60 text-stone-500 hover:border-stone-300'
+                      }`}
+                    >
+                      {symptom}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             <div className="mt-6 flex-1">
               <textarea
                 value={noteText}
@@ -392,6 +440,8 @@ export default function Journal({ activeNav, onNavigate, cycleData }) {
                   <span className="text-[10px] font-mono text-stone-400">Browse 50+ common entries</span>
                 </div>
               </div>
+
+              <SymptomAnalytics userId={cycleData?.userId} />
             </div>
           </div>
 

@@ -2,12 +2,25 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Serene</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="theme-color" content="#f43f5e" />
+    <meta name="description" content="Serene Cycle — Light-infused bio-menstrual intelligence. Track period phases, predictions, nutrition, and biological symptoms beautifully." />
+    <meta property="og:title" content="Serene Cycle — Biometric Menstrual Intelligence" />
+    <meta property="og:description" content="Understand your body through phase-aware nutrition, interactive cycle predictions, and encrypted biometric logs." />
+    <meta property="og:type" content="website" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="/favicon.ico" />
+    <title>Serene Cycle — Biological & Menstrual Intelligence</title>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+    <script>
+      if ('serviceWorker' in navigator && window.location.protocol === 'https:') {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').catch(() => {});
+        });
+      }
+    </script>
   </body>
 </html>
-

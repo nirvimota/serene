@@ -3,7 +3,7 @@ import {
   Heart, Smile, Activity, Moon, Zap, Sparkles, Droplet
 } from 'lucide-react';
 import { getDayInfo, addDays } from '../utils/cycleUtils';
-import TopNav from '../components/TopNav.jsx';
+
 
 export default function Dashboard({ activeNav, onNavigate, cycleData }) {
   const { loggedPeriods, cycleLength, togglePeriodDay } = cycleData;
@@ -60,8 +60,7 @@ export default function Dashboard({ activeNav, onNavigate, cycleData }) {
       <div className="fixed top-[-10%] left-[15%] w-[500px] h-[500px] rounded-full bg-rose-200/30 blur-[130px] pointer-events-none z-0 animate-pulse" style={{ animationDuration: '6s' }} />
       <div className="fixed bottom-[5%] right-[10%] w-[500px] h-[500px] rounded-full bg-amber-100/30 blur-[130px] pointer-events-none z-0 animate-pulse" style={{ animationDuration: '6s', animationDelay: '3s' }} />
 
-      {/* ============ TOP NAV ============ */}
-      <TopNav activeNav={activeNav} onNavigate={onNavigate} />
+
 
       {/* ============ MAIN CONTENT ============ */}
       <main className="relative z-20 max-w-6xl mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-12 gap-6">

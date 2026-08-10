@@ -7,10 +7,10 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
  * Calls your existing backend route: POST /api/insights/daily
  * (protected by requireAuth — needs a real Supabase session token)
  *
- * @param {{ mood?: string, entryText?: string, cyclePhase?: string, date?: string }} params
+ * @param {{ mood?: string, entryText?: string, cyclePhase?: string, symptoms?: string[], date?: string }} params
  * @returns {Promise<{ reflection: string, prompt: string, cached: boolean }>}
  */
-export async function getDailyInsight({ mood, entryText, cyclePhase, date }) {
+export async function getDailyInsight({ mood, entryText, cyclePhase, symptoms, date }) {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) throw new Error('Not authenticated');
 
@@ -20,7 +20,7 @@ export async function getDailyInsight({ mood, entryText, cyclePhase, date }) {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${session.access_token}`,
     },
-    body: JSON.stringify({ mood, entryText, cyclePhase, date }),
+    body: JSON.stringify({ mood, entryText, cyclePhase, symptoms, date }),
   });
 
   if (!res.ok) {

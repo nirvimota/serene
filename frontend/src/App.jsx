@@ -156,7 +156,7 @@ export default function App() {
       </div>
     );
   }
-  
+
   return (
     <div id="aura-cycle-root" className="relative min-h-screen text-stone-800 overflow-hidden bg-[#fdfaf8] selection:bg-rose-200 selection:text-rose-900">
 
@@ -217,7 +217,8 @@ export default function App() {
 
             <button
               id="btn-back-landing-header"
-              onClick={() => setViewMode('landing')}
+              onClick={() => setViewMode('landing')
+              }
               className="px-4 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-800 border border-stone-200/80 font-mono text-xs font-semibold transition-all duration-300 active:scale-95 cursor-pointer flex items-center space-x-1.5"
             >
               <Compass size={13} />
@@ -261,9 +262,9 @@ export default function App() {
               <button
                 id="btn-launch-tracker-header"
                 onClick={() => { setAuthMode('login'); setViewMode('auth'); }}
-                className="px-8 py-3.5 rounded-2xl bg-gradient-to-r from-rose-500 to-amber-500 hover:from-rose-600 hover:to-amber-600 text-white font-mono text-lg font-bold transition-all duration-300 shadow-md hover:shadow-rose-400/20 active:scale-95 cursor-pointer"
+                className="px-8 py-3.5 rounded-2xl bg-gradient-to-r from-rose-500 to-amber-500 hover:from-rose-600 hover:to-amber-600 text-white font-mono text-xl font-bold transition-all duration-300 shadow-md hover:shadow-rose-400/20 active:scale-95 cursor-pointer"
               >
-                LAUNCH TRACKER
+                Get Started
               </button>
 
               < a href="#science-section"

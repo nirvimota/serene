@@ -1,0 +1,16 @@
+{
+  "short_name": "Serene",
+  "name": "Serene Cycle — Biometric Menstrual Intelligence",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#fdfaf8",
+  "theme_color": "#f43f5e",
+  "display": "standalone",
+  "orientation": "portrait"
+}

@@ -95,3 +95,36 @@ body {
 .animate-ambient-glow {
   animation: ambient-glow 12s ease-in-out infinite;
 }
+
+/* Notification tray slide-down animation */
+@keyframes tray-slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Dark Mode AeroGlass Theme Overrides */
+html.dark body,
+body.dark {
+  background-color: #0d0c10;
+  color: #f5f5f4;
+}
+
+.dark .glass-panel {
+  background: rgba(24, 21, 31, 0.65);
+  backdrop-filter: blur(24px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.5);
+}
+
+.dark .glass-panel-light {
+  background: rgba(30, 27, 40, 0.4);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+

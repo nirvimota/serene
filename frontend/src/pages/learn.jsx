@@ -1,18 +1,21 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import TopNav from '../components/TopNav.jsx';
+
 import {
     Search,
     Sparkles,
     ArrowRight,
     HelpCircle,
-    ChevronRight,
     HeartPulse,
     Waves,
     Leaf,
     CheckCircle2,
     Circle,
     Plus,
-    Clock
+    Clock,
+    Pill,
+    Baby,
+    Droplets,
+    ExternalLink
 } from 'lucide-react';
 
 const MYTHS = [
@@ -20,18 +23,90 @@ const MYTHS = [
         icon: HelpCircle,
         myth: 'You can\u2019t get pregnant during your period.',
         fact: 'Sperm can survive several days, so it\u2019s possible \u2014 especially with shorter cycles.',
+        source: 'Nationwide Children\u2019s Hospital',
+        url: 'https://www.nationwidechildrens.org/family-resources-education/700childrens/2025/02/11-period-myths-and-facts',
     },
     {
         icon: HelpCircle,
-        myth: 'Irregular cycles are always a health problem.',
-        fact: 'Occasional variation is common and often normal, especially near puberty or perimenopause.',
+        myth: 'Periods sync up when you spend a lot of time with someone.',
+        fact: 'Repeated attempts to replicate the original 1971 study have failed \u2014 there\u2019s no solid biological evidence for period syncing.',
+        source: 'Cleveland Clinic, via Aisle',
+        url: 'https://periodaisle.com/blogs/all/the-truth-behind-8-period-myths',
     },
     {
         icon: HelpCircle,
-        myth: 'PMS is \u201call in your head.\u201d',
-        fact: 'PMS is driven by real hormonal shifts in the luteal phase \u2014 your symptoms are physiological.',
+        myth: 'Menstrual blood is impure or dirty.',
+        fact: 'It\u2019s the same blood that runs through your veins, mixed with uterine lining tissue \u2014 the \u201cimpurity\u201d idea comes from cultural taboo, not biology.',
+        source: 'SRH Lab, Cal Poly',
+        url: 'https://www.srhlab-calpoly.com/blog/menstrual-hygiene-myth-vs-fact',
     },
 ];
+
+const EXPERT_ARTICLES = {
+    'birth-control': {
+        label: 'Birth Control',
+        icon: Pill,
+        color: 'rose',
+        articles: [
+            {
+                title: 'Birth Control \u2014 Explained by Method',
+                source: 'ACOG',
+                summary: 'How every major method works, how easy each is to access, and STI protection for each.',
+                url: 'https://www.acog.org/womens-health/faqs/birth-control',
+            },
+            {
+                title: 'Birth Control Pill FAQ: Benefits, Risks and Choices',
+                source: 'Mayo Clinic',
+                summary: 'How the pill works, common side effects, and what happens to your cycle after stopping it.',
+                url: 'https://www.mayoclinic.org/tests-procedures/combination-birth-control-pills/in-depth/birth-control-pill/art-20045136',
+            },
+            {
+                title: 'Effectiveness of Birth Control Methods',
+                source: 'ACOG',
+                summary: 'Real-world vs. perfect-use effectiveness rates across all major methods, compared side by side.',
+                url: 'https://www.acog.org/womens-health/infographics/effectiveness-of-birth-control-methods',
+            },
+        ],
+    },
+    'pregnancy': {
+        label: 'Pregnancy Science',
+        icon: Baby,
+        color: 'purple',
+        articles: [
+            {
+                title: 'Fetal Development: Week-by-Week Stages of Pregnancy',
+                source: 'Cleveland Clinic',
+                summary: 'The three real stages of pregnancy \u2014 germinal, embryonic, fetal \u2014 and what forms in each.',
+                url: 'https://my.clevelandclinic.org/health/articles/7247-fetal-development-stages-of-growth',
+            },
+            {
+                title: 'Fetal Development: The First Trimester',
+                source: 'Mayo Clinic',
+                summary: 'Conception through week 12, and why due dates are counted from the last period, not conception.',
+                url: 'https://www.mayoclinic.org/healthy-lifestyle/pregnancy-week-by-week/in-depth/prenatal-care/art-20045302',
+            },
+        ],
+    },
+    'period-science': {
+        label: 'Period Science',
+        icon: Droplets,
+        color: 'emerald',
+        articles: [
+            {
+                title: 'Menstrual Cycle: Overview & Phases',
+                source: 'Cleveland Clinic',
+                summary: 'The hormonal mechanics behind the full cycle \u2014 follicular, ovulation, luteal, menstrual.',
+                url: 'https://my.clevelandclinic.org/health/articles/10132-menstrual-cycle',
+            },
+            {
+                title: '11 Period Myths and Facts',
+                source: 'Nationwide Children\u2019s Hospital',
+                summary: 'A wider myth/fact roundup covering cycle length, hygiene, and pregnancy misconceptions.',
+                url: 'https://www.nationwidechildrens.org/family-resources-education/700childrens/2025/02/11-period-myths-and-facts',
+            },
+        ],
+    },
+};
 
 const RESOURCE_LIBRARY = [
     {
@@ -41,6 +116,7 @@ const RESOURCE_LIBRARY = [
         title: 'Sexual Health',
         subtitle: 'Intimacy, safety, and pleasure through every cycle stage.',
         count: '24 lessons',
+        url: 'https://www.plannedparenthood.org/learn/sexual-and-reproductive-health',
     },
     {
         id: 'hormone-insights',
@@ -49,6 +125,7 @@ const RESOURCE_LIBRARY = [
         title: 'Hormone Insights',
         subtitle: 'The science of estrogen, progesterone, and your hormone map.',
         count: '18 lessons',
+        url: 'https://my.clevelandclinic.org/health/articles/22353-hormones',
     },
     {
         id: 'holistic-wellness',
@@ -57,6 +134,7 @@ const RESOURCE_LIBRARY = [
         title: 'Holistic Wellness',
         subtitle: 'Nutrition, sleep, and movement tailored to your rhythm.',
         count: '21 lessons',
+        url: 'https://www.medicalnewstoday.com/articles/menstrual-cycle-and-exercise',
     },
 ];
 
@@ -77,6 +155,7 @@ export default function Learn({ activeNav, onNavigate }) {
     const [scrollY, setScrollY] = useState(0);
     const [search, setSearch] = useState('');
     const [checkedRituals, setCheckedRituals] = useState([]);
+    const [activeArticleTab, setActiveArticleTab] = useState('birth-control');
 
     useEffect(() => {
         const handleMouseMove = (e) => {
@@ -108,6 +187,8 @@ export default function Learn({ activeNav, onNavigate }) {
         );
     }, [search]);
 
+    const activeArticleGroup = EXPERT_ARTICLES[activeArticleTab];
+
     return (
         <div id="learn-root" className="min-h-screen bg-[#fdfaf8] text-stone-800 relative overflow-hidden">
 
@@ -137,9 +218,6 @@ export default function Learn({ activeNav, onNavigate }) {
             {/* Ambient glow blobs */}
             <div className="fixed top-[-10%] left-[15%] w-[500px] h-[500px] rounded-full bg-rose-200/30 blur-[130px] pointer-events-none z-0 animate-pulse" style={{ animationDuration: '6s' }} />
             <div className="fixed bottom-[5%] right-[10%] w-[500px] h-[500px] rounded-full bg-amber-100/30 blur-[130px] pointer-events-none z-0 animate-pulse" style={{ animationDuration: '6s', animationDelay: '3s' }} />
-
-            {/* ============ TOP NAV ============ */}
-            <TopNav activeNav={activeNav} onNavigate={onNavigate} />
 
             {/* ============ MAIN CONTENT ============ */}
             <main className="relative z-20 max-w-6xl mx-auto px-6 py-10">
@@ -204,8 +282,14 @@ export default function Learn({ activeNav, onNavigate }) {
                             <p className="text-xs text-stone-500 mb-5">Gently debunking common misconceptions about menstrual health.</p>
 
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                {MYTHS.map(({ icon: Icon, myth, fact }, i) => (
-                                    <div key={i} className="glass-panel rounded-2xl p-5 bg-rose-50/50 border border-rose-100/50 flex flex-col space-y-3">
+                                {MYTHS.map(({ icon: Icon, myth, fact, source, url }, i) => (
+                                    <a
+                                        key={i}
+                                        href={url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="glass-panel rounded-2xl p-5 bg-rose-50/50 border border-rose-100/50 flex flex-col space-y-3 hover:border-rose-200 transition-all"
+                                    >
                                         <div className="w-8 h-8 rounded-lg bg-white/80 border border-rose-100 flex items-center justify-center text-rose-500">
                                             <Icon size={15} />
                                         </div>
@@ -217,12 +301,67 @@ export default function Learn({ activeNav, onNavigate }) {
                                             <span className="text-[9px] font-mono font-bold text-emerald-600 uppercase tracking-widest block mb-1">The Fact</span>
                                             <p className="text-xs text-stone-600 leading-relaxed">{fact}</p>
                                         </div>
-                                    </div>
+                                        <span className="text-[10px] font-mono text-stone-400 pt-1">
+                                            Source: {source}
+                                        </span>
+                                    </a>
                                 ))}
                             </div>
                         </div>
 
+                        {/* Trusted Reads \u2014 sourced articles from ACOG / Mayo / Cleveland Clinic */}
+                        <div>
+                            <h3 className="text-2xl font-serif font-extrabold text-stone-900 mb-1">Trusted Reads</h3>
+                            <p className="text-xs text-stone-500 mb-5">Sourced explainers from ACOG, Mayo Clinic, and Cleveland Clinic.</p>
 
+                            {/* Tab switcher */}
+                            <div className="flex flex-wrap gap-2 mb-5">
+                                {Object.entries(EXPERT_ARTICLES).map(([key, group]) => {
+                                    const isActive = key === activeArticleTab;
+                                    const c = colorMap[group.color];
+                                    const Icon = group.icon;
+                                    return (
+                                        <button
+                                            key={key}
+                                            onClick={() => setActiveArticleTab(key)}
+                                            className={`flex items-center space-x-1.5 px-3.5 py-2 rounded-xl border text-[11px] font-mono font-bold uppercase tracking-wide transition-all cursor-pointer
+                                                ${isActive
+                                                    ? `${c.bg} ${c.border} ${c.text}`
+                                                    : 'bg-white/60 border-stone-200/60 text-stone-400 hover:bg-white/90'}`}
+                                        >
+                                            <Icon size={12} />
+                                            <span>{group.label}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                {activeArticleGroup.articles.map((article) => (
+                                    <a
+                                        key={article.url}
+                                        href={article.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="glass-panel rounded-2xl p-5 bg-white/80 border border-stone-200/40 flex flex-col justify-between hover:border-stone-300 transition-all"
+                                    >
+                                        <div>
+                                            <span className="text-[9px] font-mono font-bold text-stone-400 uppercase tracking-widest block mb-1">
+                                                {article.source}
+                                            </span>
+                                            <h4 className="text-sm font-bold text-stone-900 leading-snug mb-1.5">
+                                                {article.title}
+                                            </h4>
+                                            <p className="text-xs text-stone-600 leading-relaxed">{article.summary}</p>
+                                        </div>
+                                        <span className="mt-4 inline-flex items-center space-x-1 text-[11px] font-mono font-bold text-rose-600">
+                                            <span>Read the full article</span>
+                                            <ExternalLink size={11} />
+                                        </span>
+                                    </a>
+                                ))}
+                            </div>
+                        </div>
 
                         {/* Resource Library */}
                         <div>
@@ -232,11 +371,14 @@ export default function Learn({ activeNav, onNavigate }) {
                                 {filteredResources.length === 0 ? (
                                     <div className="text-xs font-mono text-stone-400 py-6 text-center">No matching resources.</div>
                                 ) : (
-                                    filteredResources.map(({ id, icon: Icon, color, title, subtitle, count }) => {
+                                    filteredResources.map(({ id, icon: Icon, color, title, subtitle, count, url }) => {
                                         const c = colorMap[color];
                                         return (
-                                            <button
+                                            <a
                                                 key={id}
+                                                href={url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
                                                 className="w-full glass-panel rounded-2xl p-4 bg-white/80 border border-stone-200/40 flex items-center space-x-4 hover:border-stone-300 transition-all cursor-pointer text-left"
                                             >
                                                 <div className={`w-11 h-11 rounded-xl ${c.bg} border ${c.border} flex items-center justify-center ${c.text} shrink-0`}>
@@ -248,9 +390,9 @@ export default function Learn({ activeNav, onNavigate }) {
                                                 </div>
                                                 <div className="flex items-center space-x-2 shrink-0">
                                                     <span className="text-[10px] font-mono text-stone-400 font-semibold">{count}</span>
-                                                    <ChevronRight size={14} className="text-stone-300" />
+                                                    <ExternalLink size={13} className="text-stone-300" />
                                                 </div>
-                                            </button>
+                                            </a>
                                         );
                                     })
                                 )}
@@ -297,10 +439,7 @@ export default function Learn({ activeNav, onNavigate }) {
                                 })}
                             </div>
 
-                            <button className="w-full py-3 rounded-xl bg-gradient-to-r from-rose-500 to-amber-500 hover:from-rose-600 hover:to-amber-600 text-white font-mono text-xs font-bold flex items-center justify-center space-x-2 transition-all duration-300 shadow-md cursor-pointer">
-                                <Plus size={14} />
-                                <span>Add to My Selections</span>
-                            </button>
+
                         </div>
                     </div>
 
