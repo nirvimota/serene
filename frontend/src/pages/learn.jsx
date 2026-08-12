@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo} from 'react';
 
 import {
     Search,
@@ -156,7 +156,6 @@ export default function Learn({ activeNav, onNavigate }) {
     const [search, setSearch] = useState('');
     const [checkedRituals, setCheckedRituals] = useState([]);
     const [activeArticleTab, setActiveArticleTab] = useState('birth-control');
-
     useEffect(() => {
         const handleMouseMove = (e) => {
             const x = (e.clientX / window.innerWidth) - 0.5;
@@ -259,9 +258,12 @@ export default function Learn({ activeNav, onNavigate }) {
                                     Understanding Your <span className="text-rose-600">Ovarian Reserve</span>: A Guide to Modern Testing
                                 </h2>
                                 <p className="text-xs text-stone-600 leading-relaxed">
-                                    Demystifying the science behind reproductive health tracking \u2014 what the numbers mean and how to approach fertility conversations with confidence and clarity.
+                                    Demystifying the science behind reproductive health tracking {`\u2014`} what the numbers mean and how to approach fertility conversations with confidence and clarity.
                                 </p>
-                                <button className="mt-2 self-start px-5 py-2.5 rounded-xl bg-gradient-to-r from-rose-700 to-rose-800 hover:from-rose-800 hover:to-rose-900 text-white font-mono text-xs font-bold tracking-wide shadow-md transition-all active:scale-95 cursor-pointer flex items-center space-x-1.5">
+                                <button
+                                    className="mt-2 self-start px-5 py-2.5 rounded-xl bg-gradient-to-r from-rose-700 to-rose-800 hover:from-rose-800 hover:to-rose-900 text-white font-mono text-xs font-bold tracking-wide shadow-md transition-all active:scale-95 cursor-pointer flex items-center space-x-1.5"
+                                    onClick={() => window.open('https://en.wikipedia.org/wiki/Ovarian_reserve', '_blank')}
+                                >
                                     <span>Read the Full Guide</span>
                                     <ArrowRight size={13} />
                                 </button>
