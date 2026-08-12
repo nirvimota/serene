@@ -207,13 +207,12 @@ export default function Learn({ activeNav, onNavigate }) {
                 className="fixed inset-x-0 top-0 bottom-0 pointer-events-none transition-all duration-1000 ease-out z-0 opacity-15"
                 style={{
                     transform: `translate3d(${mousePos.x * 20}px, ${scrollY * -0.1}px, 0px) rotate(${scrollY * 0.003}deg)`,
-                    backgroundImage: "url('/images/aura_3d_flowers_1782974462579.jpg')",
+                    backgroundImage: "url('/images/rose.jpg')",
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
                     mixBlendMode: 'multiply'
                 }}
             />
-
             {/* Ambient glow blobs */}
             <div className="fixed top-[-10%] left-[15%] w-[500px] h-[500px] rounded-full bg-rose-200/30 blur-[130px] pointer-events-none z-0 animate-pulse" style={{ animationDuration: '6s' }} />
             <div className="fixed bottom-[5%] right-[10%] w-[500px] h-[500px] rounded-full bg-amber-100/30 blur-[130px] pointer-events-none z-0 animate-pulse" style={{ animationDuration: '6s', animationDelay: '3s' }} />

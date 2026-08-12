@@ -49,7 +49,7 @@ export default function Dashboard({ activeNav, onNavigate, cycleData }) {
         className="fixed inset-x-0 top-0 bottom-0 pointer-events-none transition-all duration-1000 ease-out z-0 opacity-15"
         style={{
           transform: `translate3d(${mousePos.x * 20}px, ${scrollY * -0.1}px, 0px) rotate(${scrollY * 0.003}deg)`,
-          backgroundImage: "url('/images/aura_3d_flowers_1782974462579.jpg')",
+          backgroundImage: "url('/images/rose.jpg')",
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           mixBlendMode: 'multiply'
